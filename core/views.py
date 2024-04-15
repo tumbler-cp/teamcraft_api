@@ -1,9 +1,7 @@
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
-from django.shortcuts import get_object_or_404
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
@@ -20,10 +18,10 @@ def collide(request):
     viewed_user = User.objects.get(id=request.data['viewed_id'])
     accepted = request.data['acception'] == 'true'
     collision = models.Collision.objects.create(
-        user = user,
-        viewed_user = viewed_user,
+        user=user,
+        viewed_user=viewed_user,
         accept=accepted,
-        match = False
+        match=False
     )
     serializer = serializers.CollisionSerializer(collision)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -62,8 +60,8 @@ def game(request):
 @permission_classes([IsAuthenticated])
 def gamer(request):
     user = User.objects.get(username=request.GET.get('username'))
-    gamer = models.Gamer.objects.get(user=user)
-    serializer = serializers.GamerSerializer(gamer)
+    obj = models.Gamer.objects.get(user=user)
+    serializer = serializers.GamerSerializer(obj)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -96,9 +94,9 @@ def suggestions(request):
 
     for guest in people:
         common_games_count[guest.user.username] = user_games.filter(pk__in=guest.games.all()).count()
-    
+
     sorted_common_games = sorted(common_games_count.items(), key=lambda x: x[1], reverse=True)
 
-    suggestions = [username for username, _ in sorted_common_games]
+    result = [username for username, _ in sorted_common_games]
 
-    return Response(suggestions)
+    return Response(result)
