@@ -13,7 +13,7 @@ class Game(models.Model):
 
 class Gamer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    games = models.ManyToManyField(Game)
+    games = models.ManyToManyField(Game, blank=True)
     description = models.TextField(blank=True, null=True)
     avatar = models.ImageField(upload_to='avatars', blank=True, null=True)
 

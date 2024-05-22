@@ -2,11 +2,13 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from django.contrib.auth.models import User, AnonymousUser
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from .serializers import UserSerializer
+from core.models import Gamer
+
 
 @api_view(['POST'])
 def signin(request):
@@ -15,12 +17,13 @@ def signin(request):
         return Response({
             "detail": "Not found"
         }, status=status.HTTP_404_NOT_FOUND)
-    token, created = Token.objects.get_or_create(user=user)
+    tkn, created = Token.objects.get_or_create(user=user)
     serializer = UserSerializer(instance=user)
     return Response({
-        "token": token.key,
+        "token": tkn.key,
         "user": serializer.data
     })
+
 
 @api_view(['POST'])
 def signup(request):
@@ -30,12 +33,14 @@ def signup(request):
         user = User.objects.get(email=request.data['email'])
         user.set_password(request.data['password'])
         user.save()
-        token = Token.objects.create(user=user)
+        tkn = Token.objects.create(user=user)
+        Gamer.objects.create(user=user)
         return Response({
-            "token": token.key,
+            "token": tkn.key,
             "user": serializer.data
         })
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication, TokenAuthentication])
