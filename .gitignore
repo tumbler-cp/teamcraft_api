@@ -5,3 +5,7 @@ chat_app/__pycache__/*
 teamcraft_api/__pycache__/*
 core/__pycache__/*
 core/migrations/__pycache__/*
+
+avatars
+chat_app/migrations
+core/migrations
