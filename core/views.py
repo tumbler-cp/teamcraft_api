@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
+from .serializers import GamerSerializer
+from .models import Gamer
 
 from . import serializers
 from . import models
@@ -41,8 +43,8 @@ def matches(request):
 @permission_classes([IsAuthenticated])
 def profile(request):
     user = request.user
-    gamer = models.Gamer.objects.get(user=user)
-    serializer = serializers.GamerSerializer(gamer)
+    user_gamer = models.Gamer.objects.get(user=user)
+    serializer = serializers.GamerSerializer(user_gamer)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -50,8 +52,8 @@ def profile(request):
 @authentication_classes([SessionAuthentication, TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def game(request):
-    game = models.Game.objects.get(id=request.GET.get('id'))
-    serializer = serializers.GameSerializer(game)
+    obj = models.Game.objects.get(id=request.GET.get('id'))
+    serializer = serializers.GameSerializer(obj)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -76,27 +78,28 @@ def get_viewed_users(user):
 @permission_classes([IsAuthenticated])
 def suggestions(request):
     user = request.user
-
     cache_key = f'sims_{user.id}'
     people = cache.get(cache_key)
 
     if not people:
-        people = models.Gamer.objects.exclude(user=user)
+        people = Gamer.objects.exclude(user=user)
 
     viewed_people_id = get_viewed_users(user)
     people = people.exclude(user__id__in=viewed_people_id)
-
     cache.set(cache_key, people, timeout=300)
 
     user_games = user.gamer.games.all()
-
     common_games_count = {}
+    people_with_common_games = []
 
     for guest in people:
-        common_games_count[guest.user.username] = user_games.filter(pk__in=guest.games.all()).count()
+        common_games = user_games.filter(pk__in=guest.games.all())
+        common_games_count[guest.user.username] = common_games.count()
+        if common_games.exists():
+            people_with_common_games.append(guest)
 
-    sorted_common_games = sorted(common_games_count.items(), key=lambda x: x[1], reverse=True)
+    sorted_people = sorted(people_with_common_games, key=lambda gst: common_games_count[gst.user.username],
+                           reverse=True)
 
-    result = [username for username, _ in sorted_common_games]
-
-    return Response(result)
+    serializer = GamerSerializer(sorted_people, many=True)
+    return Response(serializer.data)
