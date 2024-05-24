@@ -1,3 +1,4 @@
+import django.db.utils
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -18,7 +19,7 @@ from . import models
 def collide(request):
     user = request.user
     viewed_user = User.objects.get(id=request.data['viewed_id'])
-    accepted = request.data['acception'] == 'true'
+    accepted = request.data['acceptation'] == 'true'
     collision = models.Collision.objects.create(
         user=user,
         viewed_user=viewed_user,
@@ -103,3 +104,28 @@ def suggestions(request):
 
     serializer = GamerSerializer(sorted_people, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def alter_name(request):
+    new_name = request.data['new_name']
+    user = request.user
+    try:
+        user.username = new_name
+        user.save()
+    except django.db.utils.IntegrityError:
+        return Response('Name already exists', status=status.HTTP_400_BAD_REQUEST)
+    return Response('Name changed successfully')
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def alter_description(request):
+    user = request.user
+    obj = Gamer.objects.get(user=user)
+    obj.description = request.data['new_description']
+    obj.save()
+    return Response('Description changed successfully')

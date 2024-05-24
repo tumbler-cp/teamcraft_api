@@ -1,11 +1,12 @@
-from django.urls import re_path
+from django.urls import re_path, path
 from . import views
 
 urlpatterns = [
-    re_path('collide', views.collide),
-    re_path('matches', views.matches),
-    re_path('game_view', views.game),
-    re_path('profile', views.profile),
-    re_path('gamer', views.gamer),
-    re_path('suggestions', views.suggestions)
+    path('collide', views.collide),
+    path('matches', views.matches),
+    path('game_view', views.game),
+    path('profile', views.profile),
+    path('gamer', views.gamer),
+    path('suggestions', views.suggestions),
+    path('alter_name', views.alter_name),
 ]
