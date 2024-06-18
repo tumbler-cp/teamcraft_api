@@ -1,53 +1,39 @@
-from channels.generic.websocket import WebsocketConsumer
-from django.shortcuts import get_object_or_404
-from asgiref.sync import async_to_sync
-from .models import *
+import json
+from channels.db import database_sync_to_async
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django.contrib.auth.models import AnonymousUser
+from .models import Message
 
 
-class ChatConsumer(WebsocketConsumer):
-    def connect(self):
-        if self.scope['user'].is_anonymous:
-            self.close()
+class EmptyConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
 
-        self.user = self.scope['user']
-        self.chatroom_name = self.scope['url_route']['kwargs']['chatroom_name']
-        self.chatroom = get_object_or_404(ChatGroup, group_name=self.chatroom_name)
 
-        async_to_sync(self.channel_layer.group_add)(
-            self.chatroom_name, self.channel_name
-        )
+class ChatConsumer(AsyncWebsocketConsumer):
+    groups = ['general']
 
-        self.accept()
+    async def connect(self):
+        await self.accept()
+        if not isinstance(self.scope['user'], AnonymousUser):
+            self.user_id = self.scope['user'].id
+            await self.channel_layer.group_add(f'{self.user_id}-message', self.channel_name)
+        else:
+            print('User not found!')
 
-    def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)(
-            self.chatroom_name, self.channel_name
-        )
+    async def send_info_to_many(self, event):
+        message = event['text']
+        await self.send(text_data=json.dumps(message))
 
-    def receive(self, text_data):
-        text_data_json = json.loads(text_data)
-        body = text_data_json['body']
+    async def send_last_message(self, event):
+        last_message = await self.get_last_message(self.user_id)
+        last_message['status'] = event['text']
+        await self.send(text_data=json.dumps(last_message))
 
-        message = GroupMessage.objects.create(
-            body=body,
-            author=self.user,
-            group=self.chatroom
-        )
-        event = {
-            'type': 'message_handler',
-            'message_id': message.id,
+    @database_sync_to_async
+    def get_last_message(self, user_id):
+        message = Message.objects.filter(user_id=user_id).last()
+        return {
+            'message': message.message,
+            'timestamp': message.timestamp.isoformat()
         }
-        async_to_sync(self.channel_layer.group_send)(
-            self.chatroom_name, event
-        )
-
-    def message_handler(self, event):
-        message_id = event['message_id']
-        message = GroupMessage.objects.get(id=message_id)
-        context = {
-            'message': message,
-            'user': self.user,
-            'chat_group': self.chatroom
-        }
-        html = render_to_string("a_rtchat/partials/chat_message_p.html", context=context)
-        self.send(text_data=html)

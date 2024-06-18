@@ -1,6 +1,6 @@
 from django.contrib import admin
-from . import models
 
+from chat.models import Room, Message
 
-admin.site.register(models.ChatGroup)
-admin.site.register(models.ChatMessage)
+admin.site.register(Room)
+admin.site.register(Message)
