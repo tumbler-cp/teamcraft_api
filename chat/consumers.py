@@ -5,11 +5,6 @@ from django.contrib.auth.models import AnonymousUser
 from .models import Message
 
 
-class EmptyConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        await self.accept()
-
-
 class ChatConsumer(AsyncWebsocketConsumer):
     groups = ['general']
 

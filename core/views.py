@@ -1,10 +1,11 @@
 import django.db.utils
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes, parser_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
 from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import FileUploadParser
 from django.core.cache import cache
 from .serializers import GamerSerializer
 from .models import Gamer
@@ -129,3 +130,15 @@ def alter_description(request):
     obj.description = request.data['new_description']
     obj.save()
     return Response('Description changed successfully')
+
+
+@api_view(['PUT'])
+@authentication_classes([SessionAuthentication, TokenAuthentication])
+@permission_classes([IsAuthenticated])
+@parser_classes([FileUploadParser])
+def alter_avatar(request):
+    user = request.user
+    img = request.FILES['img']
+    user.gamer.avatar = img
+    user.gamer.save()
+    return Response('New avatar uploaded successfully')
