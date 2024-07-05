@@ -32,3 +32,4 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': message.message,
             'timestamp': message.timestamp.isoformat()
         }
+
